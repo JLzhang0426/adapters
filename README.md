@@ -111,8 +111,7 @@ Key conventions (enforced by [`scripts/validate_adapter.py`](scripts/validate_ad
 Use [run-parity](skills/run-parity/SKILL.md) to plan and report matched experiments,
 [parity diagnostics](docs/parity-diagnostics.md) to investigate anomalies, and
 [upload-parity-experiments](skills/upload-parity-experiments/SKILL.md) to publish
-authorized results. The [adapter specification](docs/adapters.mdx) remains the
-acceptance contract.
+results. The [adapter specification](docs/adapters.mdx) defines the requirements.
 
 Run the structural validator locally before submission:
 
@@ -121,11 +120,14 @@ python scripts/validate_adapter.py <adapter-name>
 ```
 
 Request automated review by commenting `/review-adapter` on an adapter PR.
-Owners, members, collaborators, and contributors can request it. The workflow
-calls a pinned implementation in
-[adapter-automation](https://github.com/harbor-index/adapter-automation).
-The model secrets and invocation stay configured here; the shared workflow uses
-the accepted validator and specification to inspect the submitted PR revision.
+Owners, members, collaborators, and contributors can request it. The review runs
+through a shared workflow in
+[adapter-automation](https://github.com/harbor-index/adapter-automation), using the
+API key and endpoint already configured in this repository's secrets.
+
+For a self-review, ask your coding agent to follow
+[review-adapter](skills/review-adapter/SKILL.md). This local entry loads the full
+review guide from the same automation commit as CI, so it needs access to GitHub.
 
 ## Citation
 

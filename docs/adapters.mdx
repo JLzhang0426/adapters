@@ -35,7 +35,7 @@ Stable requirement IDs are shared by the guides, skills, validator, and review r
 | ADP-COST | Canonical string costs and compatibility types | [Metadata schema](#adapter_metadatajson-schema) |
 | ADP-README | Local README section and reproduction requirements | [README requirements](#readme-requirements) |
 
-`scripts/validate_adapter.py` performs partial structural checks, not full Harbor runtime validation. Existing compatibility warnings remain non-blocking; the semantic review applies the guide and identifies the requirement ID for each finding. Documentation examples and the review caller are checked via `python3 -m unittest discover -s scripts/tests` (Python 3.11+ and Node.js 22+).
+`scripts/validate_adapter.py` performs partial structural checks, not full Harbor runtime validation. Existing compatibility warnings remain non-blocking; the semantic review applies the guide and identifies the requirement ID for each finding. Documentation examples are checked with the same validator functions and arithmetic checks via `python3 -m unittest discover -s scripts/tests` (Python 3.11+).
 
 ## Quick Start
 
@@ -395,10 +395,11 @@ harbor run -p datasets/<adapter-name> -a <agent> -m <model>
 
 ### Debug playbook (when parity does not match)
 
-Use the [run-parity skill](../skills/run-parity/SKILL.md) for author execution
-guidance and [parity diagnostics](parity-diagnostics.md) for data handoff,
-non-finite values, incomplete responses, and performance anomalies. These
-references do not add acceptance requirements to this specification.
+The [run-parity skill](../skills/run-parity/SKILL.md) walks through planning,
+running, and reporting experiments. See [parity diagnostics](parity-diagnostics.md)
+when data goes missing, results contain non-finite values, responses are
+incomplete, or runs take longer than expected. These guides explain how to
+investigate those problems; this specification still defines the requirements.
 
 If scores do not overlap per the matching criterion, work through the steps below in order. Each step narrows the hypothesis space; re-running without diagnosis is not an acceptable substitute.
 

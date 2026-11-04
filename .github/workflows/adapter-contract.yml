@@ -6,6 +6,7 @@ on:
       - 'docs/adapters*.mdx'
       - 'docs/parity-diagnostics.md'
       - 'skills/create-adapter/**'
+      - 'skills/review-adapter/**'
       - 'skills/run-parity/**'
       - 'skills/upload-parity-experiments/**'
       - 'scripts/validate_adapter.py'
@@ -18,6 +19,7 @@ on:
       - 'docs/adapters*.mdx'
       - 'docs/parity-diagnostics.md'
       - 'skills/create-adapter/**'
+      - 'skills/review-adapter/**'
       - 'skills/run-parity/**'
       - 'skills/upload-parity-experiments/**'
       - 'scripts/validate_adapter.py'
@@ -38,7 +40,4 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
       - run: python -m unittest discover -s scripts/tests -v
