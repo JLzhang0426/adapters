@@ -191,6 +191,13 @@ class AdapterRequirementsTests(unittest.TestCase):
         self.assertGreaterEqual(len(references), 4)
         self.assertEqual(len(set(references)), 1)
 
+    def test_review_pins_match(self):
+        workflow = (ROOT / ".github/workflows/adapter-review.yml").read_text()
+        pins = re.findall(r"(?:adapter-review\.yml@|automation-ref:\s*)(\S+)", workflow)
+        self.assertEqual(len(pins), 2)
+        self.assertRegex(pins[0], r"^[0-9a-f]{40}$")
+        self.assertEqual(pins[0], pins[1])
+
     def test_readme_section_contract(self):
         guide = (ROOT / "docs/adapters.mdx").read_text()
         headings = guide.split("The required README sections, in order, are:", 1)[1].split("```markdown", 1)[1].split("```", 1)[0]
