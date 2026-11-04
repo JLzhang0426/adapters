@@ -1,8 +1,10 @@
 # Diagnose parity anomalies without changing the benchmark
 
-These techniques support the review workflow. They are not additional universal
-acceptance thresholds. Use the benchmark's own contract and the repository's
-[adapter specification](../../../docs/adapters.mdx).
+Use these techniques when building, running, or reviewing parity experiments.
+They do not add universal acceptance thresholds. Follow the benchmark's own
+contract and the repository's [adapter specification](adapters.mdx).
+For planning and execution, use the [run-parity skill](../skills/run-parity/SKILL.md).
+Preserve each attempt and its configuration so another person can investigate it.
 
 ## A final stage has no input data
 

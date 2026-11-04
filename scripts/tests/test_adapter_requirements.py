@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 import re
 import statistics
+import subprocess
 import sys
 import tempfile
 import tomllib
@@ -176,14 +177,12 @@ class AdapterRequirementsTests(unittest.TestCase):
     def test_contract_references_do_not_float(self):
         guide = (ROOT / "docs/adapters.mdx").read_text()
         self.assertIn(f"Adapter contract v{validator.CONTRACT_VERSION}", guide)
-        workflow = (ROOT / ".github/workflows/adapter-review.yml").read_text()
-        self.assertIn("steps.adapter_spec.outputs.revision", workflow)
         for requirement in ("CLI", "AUTHORS", "SCRIPTS", "PARITY", "STATS", "COST", "README"):
             self.assertIn(f"ADP-{requirement}", guide)
-            self.assertIn(f"ADP-{requirement}", workflow)
         files = [".github/workflows/adapter-review.yml", "scripts/validate_adapter.py",
                  "docs/adapters.mdx", "docs/adapters-human.mdx",
-                 "skills/create-adapter/SKILL.md", "skills/upload-parity-experiments/SKILL.md"]
+                 "skills/create-adapter/SKILL.md", "skills/run-parity/SKILL.md",
+                 "skills/upload-parity-experiments/SKILL.md"]
         for filename in files:
             with self.subTest(file=filename):
                 content = (ROOT / filename).read_text()
@@ -199,6 +198,48 @@ class AdapterRequirementsTests(unittest.TestCase):
         for name, pattern in validator._README_SECTIONS:
             with self.subTest(section=name):
                 self.assertRegex(headings, "(?m)" + pattern)
+
+    def test_review_caller_pins_matching_workflow_and_implementation(self):
+        workflow = (ROOT / '.github/workflows/adapter-review.yml').read_text()
+        workflow_pin = re.search(r'uses: harbor-index/adapter-automation/\.github/workflows/adapter-review.yml@([0-9a-f]{40})\b', workflow)
+        implementation_pin = re.search(r'automation-ref: ([0-9a-f]{40})\b', workflow)
+        self.assertIsNotNone(workflow_pin)
+        self.assertIsNotNone(implementation_pin)
+        self.assertEqual(workflow_pin[1], implementation_pin[1])
+
+    def test_review_invocation_preserves_comment_authorization(self):
+        workflow = (ROOT / '.github/workflows/adapter-review.yml').read_text()
+        trigger = workflow.split('jobs:', 1)[0]
+        self.assertIn('issue_comment:', trigger)
+        self.assertIn('types: [created]', trigger)
+        self.assertNotIn('pull_request', trigger)
+        self.assertNotIn('workflow_dispatch', trigger)
+        expression = workflow.split('    if: |\n', 1)[1].split('    permissions:', 1)[0].strip()
+        runner = '''
+const expression = process.argv[1];
+const cases = JSON.parse(process.argv[2]);
+const contains = (value, search) => value.toLowerCase().includes(search.toLowerCase());
+const evaluate = new Function('github', 'contains', `return Boolean(${expression});`);
+process.stdout.write(JSON.stringify(cases.map(item => evaluate(item, contains))));
+'''
+        cases = []
+        expected = []
+        for role in ('OWNER', 'MEMBER', 'COLLABORATOR', 'CONTRIBUTOR', 'FIRST_TIME_CONTRIBUTOR', 'NONE'):
+            cases.append({'event_name': 'issue_comment', 'event': {
+                'issue': {'pull_request': {'url': 'PR'}},
+                'comment': {'body': 'please /review-adapter', 'author_association': role}}})
+            expected.append(role in ('OWNER', 'MEMBER', 'COLLABORATOR', 'CONTRIBUTOR'))
+        cases.extend([
+            {'event_name': 'issue_comment', 'event': {'issue': {}, 'comment': {
+                'body': '/review-adapter', 'author_association': 'OWNER'}}},
+            {'event_name': 'issue_comment', 'event': {'issue': {'pull_request': {}}, 'comment': {
+                'body': 'ordinary comment', 'author_association': 'OWNER'}}},
+            {'event_name': 'pull_request_target', 'event': {}},
+        ])
+        expected.extend([False, False, False])
+        result = subprocess.run(['node', '-e', runner, expression, json.dumps(cases)],
+                                capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(result.stdout), expected)
 
 
 if __name__ == "__main__":
