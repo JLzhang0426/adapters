@@ -8,89 +8,39 @@ permissions:
   contents: read
 
 jobs:
-  claude-runtime:
+  model-inventory:
     if: github.head_ref == 'diagnose/adapter-review-runtime-20261105'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
-    env:
-      ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+    timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - name: Probe the configured model endpoint
+      - name: List advertised Claude models without running inference
         shell: python
         env:
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           import json
           import os
-          import time
           import urllib.error
           import urllib.request
 
           base = os.environ["ANTHROPIC_BASE_URL"].rstrip("/")
           key = os.environ["ANTHROPIC_API_KEY"]
-          body = {"model": "claude-opus-5-5", "max_tokens": 32,
-                  "messages": [{"role": "user", "content": "Reply OK."}]}
-          request = urllib.request.Request(base + "/v1/messages", data=json.dumps(body).encode(),
-              headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
-          started = time.monotonic()
+          request = urllib.request.Request(base + "/v1/models", headers={
+              "x-api-key": key, "authorization": "Bearer " + key,
+              "anthropic-version": "2023-06-01"})
           try:
               with urllib.request.urlopen(request, timeout=30) as response:
                   payload = json.load(response)
-                  print(json.dumps({"status": response.status, "model": payload.get("model"),
-                                    "type": payload.get("type"), "stop_reason": payload.get("stop_reason")}))
+                  models = payload.get("data", [])
+                  names = sorted(model["id"] for model in models
+                                 if "claude" in model.get("id", "").lower())
+                  print(json.dumps({"status": response.status,
+                                    "advertised_claude_models": names,
+                                    "has_more": payload.get("has_more")}))
           except urllib.error.HTTPError as error:
               output = error.read().decode(errors="replace").replace(key, "[REDACTED]").replace(base, "[REDACTED]")
-              print(f"Model endpoint HTTP {error.code}: {output[:5000]}")
+              print(f"Model inventory HTTP {error.code}: {output[:5000]}")
           except Exception as error:
               output = str(error).replace(key, "[REDACTED]").replace(base, "[REDACTED]")
-              print(f"Model endpoint {type(error).__name__}: {output}")
-          print(f"Model endpoint request took {time.monotonic() - started:.1f}s")
-      - name: Minimal request with production Claude configuration
-        id: claude
-        uses: anthropics/claude-code-action/base-action@12dd8d74c712f5f3669365b2369b558c495b1104
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: |
-            --tools "Read,Glob,Grep,WebFetch,WebSearch"
-            --allowedTools "Read,Glob,Grep,WebFetch,WebSearch"
-            --strict-mcp-config --mcp-config '{"mcpServers":{}}'
-            --setting-sources ""
-            --json-schema '{"type":"object","properties":{"report":{"type":"string"}},"required":["report"],"additionalProperties":false}'
-          prompt: >-
-            This is a runtime connectivity diagnostic. Do not read files, use tools,
-            edit code, or post comments. Return the report field with the text
-            "Adapter review runtime is reachable."
-      - name: Print redacted result and error fields
-        if: always()
-        shell: python
-        env:
-          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
-          REDACT_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          import json
-          import os
-          from pathlib import Path
-
-          path = Path(os.environ.get("EXECUTION_FILE") or
-                      str(Path(os.environ["RUNNER_TEMP"]) / "claude-execution-output.json"))
-          if not path.is_file():
-              raise SystemExit("Claude did not save an execution transcript.")
-          payload = json.loads(path.read_text())
-          messages = payload if isinstance(payload, list) else payload.get("messages", [payload])
-          for message in messages:
-              if message.get("type") == "result":
-                  fields = ("type", "subtype", "is_error", "result", "errors",
-                            "duration_ms", "num_turns", "total_cost_usd", "structured_output")
-                  diagnostic = {key: message[key] for key in fields if key in message}
-              elif message.get("type") == "assistant" and (message.get("error") or message.get("isApiErrorMessage")):
-                  diagnostic = message
-              else:
-                  continue
-              output = json.dumps(diagnostic, ensure_ascii=False)
-              for value in (os.environ.get("REDACT_API_KEY"), os.environ.get("ANTHROPIC_BASE_URL")):
-                  if value:
-                      output = output.replace(value, "[REDACTED]")
-              print(output[:16000])
+              print(f"Model inventory {type(error).__name__}: {output}")
