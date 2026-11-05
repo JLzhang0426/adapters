@@ -21,10 +21,10 @@ jobs:
       pull-requests: write
       issues: read
       id-token: write
-    uses: harbor-index/adapter-automation/.github/workflows/adapter-review.yml@b65f11d44c11906689078c6efdeeb8ef81fcee83
+    uses: harbor-index/adapter-automation/.github/workflows/adapter-review.yml@0daa1c989c0d1182ce71089a3547bbeb070766a2
     with:
       pr-number: ${{ github.event.issue.number }}
-      automation-ref: b65f11d44c11906689078c6efdeeb8ef81fcee83
+      automation-ref: 0daa1c989c0d1182ce71089a3547bbeb070766a2
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
