@@ -176,14 +176,12 @@ class AdapterRequirementsTests(unittest.TestCase):
     def test_contract_references_do_not_float(self):
         guide = (ROOT / "docs/adapters.mdx").read_text()
         self.assertIn(f"Adapter contract v{validator.CONTRACT_VERSION}", guide)
-        workflow = (ROOT / ".github/workflows/adapter-review.yml").read_text()
-        self.assertIn("steps.adapter_spec.outputs.revision", workflow)
         for requirement in ("CLI", "AUTHORS", "SCRIPTS", "PARITY", "STATS", "COST", "README"):
             self.assertIn(f"ADP-{requirement}", guide)
-            self.assertIn(f"ADP-{requirement}", workflow)
         files = [".github/workflows/adapter-review.yml", "scripts/validate_adapter.py",
                  "docs/adapters.mdx", "docs/adapters-human.mdx",
-                 "skills/create-adapter/SKILL.md", "skills/upload-parity-experiments/SKILL.md"]
+                 "skills/create-adapter/SKILL.md", "skills/run-parity/SKILL.md",
+                 "skills/upload-parity-experiments/SKILL.md"]
         for filename in files:
             with self.subTest(file=filename):
                 content = (ROOT / filename).read_text()
@@ -193,13 +191,19 @@ class AdapterRequirementsTests(unittest.TestCase):
         self.assertGreaterEqual(len(references), 4)
         self.assertEqual(len(set(references)), 1)
 
+    def test_review_pins_match(self):
+        workflow = (ROOT / ".github/workflows/adapter-review.yml").read_text()
+        pins = re.findall(r"(?:adapter-review\.yml@|automation-ref:\s*)(\S+)", workflow)
+        self.assertEqual(len(pins), 2)
+        self.assertRegex(pins[0], r"^[0-9a-f]{40}$")
+        self.assertEqual(pins[0], pins[1])
+
     def test_readme_section_contract(self):
         guide = (ROOT / "docs/adapters.mdx").read_text()
         headings = guide.split("The required README sections, in order, are:", 1)[1].split("```markdown", 1)[1].split("```", 1)[0]
         for name, pattern in validator._README_SECTIONS:
             with self.subTest(section=name):
                 self.assertRegex(headings, "(?m)" + pattern)
-
 
 if __name__ == "__main__":
     unittest.main()

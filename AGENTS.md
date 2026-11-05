@@ -71,6 +71,7 @@ Package conventions (enforced by `scripts/validate_adapter.py`):
 
 - `docs/adapters.mdx` — comprehensive adapter spec (the "Agent Guide"; the contract for building adapters).
 - `docs/adapters-human.mdx` — concise human walkthrough.
+- `docs/parity-diagnostics.md` — help with investigating parity failures and unexpected results.
 
 > Note: these docs were migrated from the Harbor monorepo docs site and are pending a dedicated
 > content pass; some cross-links and paths may still reference the old monorepo layout.
@@ -78,7 +79,8 @@ Package conventions (enforced by `scripts/validate_adapter.py`):
 ## Skills
 
 - `skills/create-adapter/` — scaffold and guide a new adapter build.
-- `skills/review-adapter/` — review benchmark fidelity, grading, and parity evidence.
+- `skills/review-adapter/` — review your adapter using the same guide as CI.
+- `skills/run-parity/` — plan, run, diagnose, and report matched parity experiments.
 - `skills/upload-parity-experiments/` — publish parity/oracle result folders to the
   `harborframework/parity-experiments` Hugging Face dataset.
 
@@ -89,7 +91,9 @@ Located in `.github/workflows/`:
 - `adapter-review.yml` — structural validation + AI review. Triggered by a `/review-adapter`
   comment on a PR (from an owner/member/collaborator/contributor). Runs
   `scripts/validate_adapter.py` on the adapters touched by the PR (detected under `src/`), then an
-  AI review against the adapter spec.
+  AI review against the adapter spec. It calls the shared workflow in
+  `harbor-index/adapter-automation` at a pinned commit. The existing API key and endpoint
+  are passed from this repository's secrets.
 - `update-parity-summary.yml` — on push to the default branch touching any
   `src/*/parity_experiment.json`, regenerates the repo-root `parity_summary.csv` via
   `scripts/generate_parity_summary.py` and commits it.

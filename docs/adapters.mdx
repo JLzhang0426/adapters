@@ -395,6 +395,12 @@ harbor run -p datasets/<adapter-name> -a <agent> -m <model>
 
 ### Debug playbook (when parity does not match)
 
+The [run-parity skill](../skills/run-parity/SKILL.md) walks through planning,
+running, and reporting experiments. See [parity diagnostics](parity-diagnostics.md)
+when data goes missing, results contain non-finite values, responses are
+incomplete, or runs take longer than expected. These guides explain how to
+investigate those problems; this specification still defines the requirements.
+
 If scores do not overlap per the matching criterion, work through the steps below in order. Each step narrows the hypothesis space; re-running without diagnosis is not an acceptable substitute.
 
 | # | Action | When to run | Signal to look for | Decision |

@@ -106,6 +106,29 @@ Key conventions (enforced by [`scripts/validate_adapter.py`](scripts/validate_ad
   `<AdapterName>Adapter` class whose `run(self)` writes tasks under `self.output_dir`.
 - Task names must be stable across runs and unique / registry-safe.
 
+## Parity and review tooling
+
+Use [run-parity](skills/run-parity/SKILL.md) to plan and report matched experiments,
+[parity diagnostics](docs/parity-diagnostics.md) to investigate anomalies, and
+[upload-parity-experiments](skills/upload-parity-experiments/SKILL.md) to publish
+results. The [adapter specification](docs/adapters.mdx) defines the requirements.
+
+Run the structural validator locally before submission:
+
+```bash
+python scripts/validate_adapter.py <adapter-name>
+```
+
+Request automated review by commenting `/review-adapter` on an adapter PR.
+Owners, members, collaborators, and contributors can request it. The review runs
+through a shared workflow in
+[adapter-automation](https://github.com/harbor-index/adapter-automation), using the
+API key and endpoint already configured in this repository's secrets.
+
+For a self-review, ask your coding agent to follow
+[review-adapter](skills/review-adapter/SKILL.md). This local entry loads the full
+review guide from the same automation commit as CI, so it needs access to GitHub.
+
 ## Citation
 
 If you use **Harbor adapters** in academic work, please cite the paper:

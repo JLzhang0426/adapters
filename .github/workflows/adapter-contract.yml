@@ -4,7 +4,10 @@ on:
   pull_request:
     paths:
       - 'docs/adapters*.mdx'
+      - 'docs/parity-diagnostics.md'
       - 'skills/create-adapter/**'
+      - 'skills/review-adapter/**'
+      - 'skills/run-parity/**'
       - 'skills/upload-parity-experiments/**'
       - 'scripts/validate_adapter.py'
       - 'scripts/tests/**'
@@ -14,7 +17,10 @@ on:
     branches: [main]
     paths:
       - 'docs/adapters*.mdx'
+      - 'docs/parity-diagnostics.md'
       - 'skills/create-adapter/**'
+      - 'skills/review-adapter/**'
+      - 'skills/run-parity/**'
       - 'skills/upload-parity-experiments/**'
       - 'scripts/validate_adapter.py'
       - 'scripts/tests/**'
