@@ -1,8 +1,8 @@
 name: Adapter Review Runtime Diagnostic
 
 on:
-  push:
-    branches: [diagnose/adapter-review-runtime-20261105]
+  pull_request:
+    paths: [.github/workflows/adapter-review-runtime-diagnostic.yml]
 
 permissions:
   contents: read
@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   claude-runtime:
+    if: github.head_ref == 'diagnose/adapter-review-runtime-20261105'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
