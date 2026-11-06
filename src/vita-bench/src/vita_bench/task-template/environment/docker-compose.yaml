@@ -1,0 +1,22 @@
+services:
+  main:
+    depends_on:
+      vita-runtime:
+        condition: service_healthy
+
+  vita-runtime:
+    build:
+      context: ./runtime-server
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - VITA_USER_MODEL=${VITA_USER_MODEL:-gpt-4.1}
+      - VITA_USER_LLM_ARGS_JSON=${VITA_USER_LLM_ARGS_JSON:-}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s

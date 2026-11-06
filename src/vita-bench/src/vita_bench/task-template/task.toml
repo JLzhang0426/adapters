@@ -1,0 +1,36 @@
+schema_version = "1.1"
+
+[task]
+name = "meituan-longcat/vita-bench__{task_id}"
+authors = [
+    { name = "Wei He", email = "hewei79@meituan.com" },
+    { name = "Yueqing Sun", email = "sunyueqing@meituan.com" },
+    { name = "Hongyan Hao", email = "haohongyan02@meituan.com" },
+    { name = "Xueyuan Hao", email = "haoxueyuan03@meituan.com" },
+    { name = "Zhikang Xia", email = "xiazhikang@meituan.com" },
+    { name = "Qi Gu", email = "guqi03@meituan.com" },
+]
+keywords = ["vita-bench", "{task_set}", "tool-use", "simulated-user", "life-services"]
+
+[metadata]
+difficulty = "{difficulty}"
+category = "customer_service"
+
+[verifier]
+timeout_sec = 1800.0
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}", OPENAI_BASE_URL = "${OPENAI_BASE_URL}", VITA_EVALUATOR_MODEL = "${VITA_EVALUATOR_MODEL:-claude-sonnet-4-5}", VITA_EVALUATOR_LLM_ARGS_JSON = "${VITA_EVALUATOR_LLM_ARGS_JSON:-}" }
+
+[agent]
+timeout_sec = 3600.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+env = { OPENAI_API_KEY = "${OPENAI_API_KEY}", OPENAI_BASE_URL = "${OPENAI_BASE_URL}", VITA_USER_MODEL = "${VITA_USER_MODEL:-gpt-4.1}", VITA_USER_LLM_ARGS_JSON = "${VITA_USER_LLM_ARGS_JSON:-}" }
+
+[[environment.mcp_servers]]
+name = "vita-runtime"
+transport = "streamable-http"
+url = "http://vita-runtime:8000/mcp"

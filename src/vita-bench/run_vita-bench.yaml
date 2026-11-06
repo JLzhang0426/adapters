@@ -1,0 +1,45 @@
+# Reference Harbor job config for the VitaBench adapter (parity setting).
+#
+# Run from the adapters repository root:
+#   PYTHONPATH="$PWD/src/vita-bench" uv run --project src/vita-bench harbor run -c src/vita-bench/run_vita-bench.yaml
+#
+# Required environment variables:
+#   OPENAI_API_KEY / OPENAI_BASE_URL   OpenAI-compatible endpoint used by the agent,
+#                                      the user simulator and the evaluator (same as
+#                                      the upstream models.yaml base_url).
+#   VITA_USER_MODEL                    user-simulator model (upstream default gpt-4.1)
+#   VITA_EVALUATOR_MODEL               evaluator model
+#
+# Upstream `vita run --num-trials 3` derives one seed per trial; Harbor expresses
+# that as three agent entries with vita_trial_index 0/1/2 and n_attempts 1.
+jobs_dir: jobs
+n_attempts: 1
+timeout_multiplier: 1.0
+orchestrator:
+  type: local
+  n_concurrent_trials: 8
+  quiet: false
+retry:
+  max_retries: 3
+environment:
+  type: docker
+  force_build: false
+  delete: true
+agents:
+  - name: vita_llm_agent
+    import_path: vita_llm_agent:VitaLLMAgent
+    model_name: openai/gpt-4.1
+    kwargs:
+      vita_trial_index: 0
+  - name: vita_llm_agent
+    import_path: vita_llm_agent:VitaLLMAgent
+    model_name: openai/gpt-4.1
+    kwargs:
+      vita_trial_index: 1
+  - name: vita_llm_agent
+    import_path: vita_llm_agent:VitaLLMAgent
+    model_name: openai/gpt-4.1
+    kwargs:
+      vita_trial_index: 2
+datasets:
+  - path: datasets/vita-bench

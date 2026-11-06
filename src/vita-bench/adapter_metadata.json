@@ -1,0 +1,30 @@
+[
+  {
+    "adapter_name": "vita-bench",
+    "adapter_builders": ["Jialin Zhang (jiz297@berkeley.edu)"],
+    "original_benchmark": [
+      {
+        "split": "full",
+        "size": 400,
+        "harness": "agent",
+        "supported_agents": ["LLMAgent"],
+        "adaptable": true,
+        "notes": "VitaBench (meituan-longcat/vitabench, ICLR 2026), English task set. Four task sets of 100 tasks each: delivery, instore, ota (single-scenario) and cross_domain (cross-scenario, the paper's headline split). Simulated-user conversation over a 66-tool environment; rubric-based sliding-window LLM evaluator; binary per-task reward."
+      }
+    ],
+    "harbor_adapter": [
+      {
+        "split": "full",
+        "adapted_benchmark_size": 400,
+        "parity_benchmark_size": null,
+        "parity_sampling_rate": null,
+        "registry_benchmark_size": 400,
+        "added_agents": ["vita-llm-agent"],
+        "parity_matching_agents": [],
+        "parity_unmatching_agents": null,
+        "parity_costs": null,
+        "notes": "Each task runs the original VitaBench environment and user simulator in an MCP sidecar (vita-runtime); the verifier replays the recorded conversation through the official vita.evaluator. Oracle solutions are stored, pre-validated trajectories (the benchmark ships no reference solutions). Parity pending."
+      }
+    ]
+  }
+]

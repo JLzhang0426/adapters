@@ -1,0 +1,26 @@
+[project]
+name = "harbor-vita-bench-adapter"
+version = "0.1.0"
+description = "Harbor adapter for VitaBench (meituan-longcat/vitabench): multi-turn tool-use life-service agent tasks with a simulated user and rubric-based LLM evaluator."
+readme = "README.md"
+authors = [
+    { name = "Jialin Zhang", email = "jiz297@berkeley.edu" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "harbor>=0.25.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+vita-bench = "vita_bench.main:main"
+
+[build-system]
+requires = ["hatchling>=1,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vita_bench"]
+
+[tool.uv]
+package = true
