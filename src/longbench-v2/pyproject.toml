@@ -1,0 +1,25 @@
+[project]
+name = "harbor-longbench-v2-adapter"
+version = "0.1.0"
+description = "Harbor adapter for LongBench v2 (THUDM/LongBench): 503 long-context multiple-choice questions across six task categories."
+readme = "README.md"
+authors = [
+    { name = "Jialin Zhang", email = "jiz297@berkeley.edu" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "harbor>=0.25.0",
+]
+
+[project.scripts]
+longbench-v2 = "longbench_v2.main:main"
+
+[build-system]
+requires = ["hatchling>=1,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/longbench_v2"]
+
+[tool.uv]
+package = true

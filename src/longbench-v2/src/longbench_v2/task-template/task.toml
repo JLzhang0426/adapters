@@ -1,0 +1,37 @@
+schema_version = "1.1"
+
+[task]
+name = "thudm/longbench-v2__{task_id}"
+authors = [
+    { name = "Yushi Bai" },
+    { name = "Shangqing Tu" },
+    { name = "Jiajie Zhang" },
+    { name = "Hao Peng" },
+    { name = "Xiaozhi Wang" },
+    { name = "Xin Lv" },
+    { name = "Shulin Cao" },
+    { name = "Jiazheng Xu" },
+    { name = "Lei Hou" },
+    { name = "Yuxiao Dong" },
+    { name = "Jie Tang" },
+    { name = "Juanzi Li" },
+]
+keywords = ["longbench-v2", "long-context", "multiple-choice", "{domain_slug}", "{length}"]
+
+[metadata]
+difficulty = "{difficulty}"
+category = "long_context_qa"
+domain = "{domain_slug}"
+length = "{length}"
+
+[verifier]
+timeout_sec = 120.0
+
+[agent]
+timeout_sec = 3600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 2048

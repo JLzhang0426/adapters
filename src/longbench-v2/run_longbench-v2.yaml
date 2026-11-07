@@ -1,0 +1,20 @@
+# Reference Harbor job config for LongBench v2.
+# From the adapters repo root:
+#   uv run --project src/longbench-v2 harbor run -c src/longbench-v2/run_longbench-v2.yaml -a <agent> -m "<model>"
+# Oracle verification:
+#   uv run --project src/longbench-v2 harbor run -c src/longbench-v2/run_longbench-v2.yaml -a oracle
+jobs_dir: jobs
+n_attempts: 1
+timeout_multiplier: 1.0
+orchestrator:
+  type: local
+  n_concurrent_trials: 8
+  quiet: false
+environment:
+  type: docker
+  force_build: false
+  delete: true
+agents:
+  - name: oracle
+datasets:
+  - path: datasets/longbench-v2

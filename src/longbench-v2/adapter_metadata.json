@@ -1,0 +1,30 @@
+[
+  {
+    "adapter_name": "longbench-v2",
+    "adapter_builders": ["Jialin Zhang (jiz297@berkeley.edu)"],
+    "original_benchmark": [
+      {
+        "split": "full",
+        "size": 503,
+        "harness": "llm",
+        "supported_agents": null,
+        "adaptable": true,
+        "notes": "LongBench v2 (THUDM/LongBench, arXiv:2412.15204): 503 long-context multiple-choice questions (8k-2M words) in six categories. Original harness is a direct zero-shot LLM call (pred.py) scored by accuracy (result.py)."
+      }
+    ],
+    "harbor_adapter": [
+      {
+        "split": "full",
+        "adapted_benchmark_size": 503,
+        "parity_benchmark_size": null,
+        "parity_sampling_rate": null,
+        "registry_benchmark_size": 503,
+        "added_agents": [],
+        "parity_matching_agents": [],
+        "parity_unmatching_agents": null,
+        "parity_costs": null,
+        "notes": "All 503 questions adapted; context shipped as /app/context.txt, answer written to /app/answer.txt, deterministic verifier mirroring the official extract_answer parsing. A stratified 176-task parity split is available via --split parity. Parity pending (Scenario 2: fork with a CLI-agent runner)."
+      }
+    ]
+  }
+]

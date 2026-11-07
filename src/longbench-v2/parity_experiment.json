@@ -1,0 +1,26 @@
+[
+  {
+    "adapter_name": "longbench-v2",
+    "agent": "<agent>@<version>",
+    "model": "<model>",
+    "date": "YYYY-MM-DD",
+    "adapted_benchmark_size": 503,
+    "parity_benchmark_size": null,
+    "number_of_runs": null,
+    "notes": "Parity pending.",
+    "original_parity_repo": "https://github.com/THUDM/LongBench",
+    "adapter_pr": [],
+    "dataset_pr": [],
+    "parity_pr": [],
+    "metrics": [
+      {
+        "benchmark_name": "LongBench v2",
+        "metric": "Accuracy",
+        "original": "<mean +/- sample_SEM>",
+        "harbor": "<mean +/- sample_SEM>",
+        "original_runs": [],
+        "harbor_runs": []
+      }
+    ]
+  }
+]
