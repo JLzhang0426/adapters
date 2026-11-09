@@ -19,7 +19,13 @@ words) with **503 human-written, expert-reviewed multiple-choice questions**
 - **Adapter size:** 503 tasks (the full dataset; nothing excluded). A
   stratified `parity` split of 176 tasks is also available (`--split parity`).
 - **Source:** <https://github.com/THUDM/LongBench>, data from
-  <https://huggingface.co/datasets/THUDM/LongBench-v2> (`data.json`, ungated).
+  <https://huggingface.co/datasets/zai-org/LongBench-v2> (formerly
+  `THUDM/LongBench-v2`; `data.json`, ungated).
+- **Pinned revisions:** dataset `zai-org/LongBench-v2@2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9`
+  (`data.json` sha256 `15d61c22d92c96900b3c4948b6aeea218d3214b676a65df48e7b8555604c7fe2`,
+  465,490,535 bytes); prompt + scorer `THUDM/LongBench@2e00731f8d0bff23dc4325161044d0ed8af94c1e`
+  (`prompts/0shot.txt`, `pred.py::extract_answer`, `result.py`). Both are
+  recorded in every task's `task.toml` `[metadata]` and `tests/expected.json`.
 - **License:** MIT.
 - **Original metric:** accuracy (overall and by difficulty/length), from the
   model's single response to a zero-shot prompt containing the full context.
@@ -27,8 +33,8 @@ words) with **503 human-written, expert-reviewed multiple-choice questions**
 Main adaptation choices: the context becomes a file (`/app/context.txt`) that
 the agent reads with its own tools instead of an inline prompt; the question,
 choices and required response format are the official `prompts/0shot.txt`
-wording; the answer is written to `/app/answer.txt` and parsed with the official
-`extract_answer` regexes (plus a bare-letter fallback).
+wording; the answer is written to `/app/answer.txt` and parsed with a verbatim
+port of the official `extract_answer` (no extensions).
 
 ## What is LongBench v2?
 
@@ -43,18 +49,26 @@ metric is zero-shot accuracy.
 
 ## Adapter Features
 
-- Generates all 503 tasks from the pinned HF `data.json` (auto-downloaded to
-  `.cache/longbench-v2/` or pointed to with `LONGBENCH_V2_DATA` / `--data-path`).
+- Generates all 503 tasks from the pinned HF `data.json` (auto-downloaded at
+  the pinned revision to `./.cache/longbench-v2/`, or pointed to with
+  `LONGBENCH_V2_DATA` / `--data-path`); the file's sha256 is verified against
+  the pin before any task is written, so task ids, content and the parity
+  subset cannot drift (`--skip-checksum` opts out, for experiments only).
 - Each task image is `python:3.12-slim` plus the context file; no services,
   no network, no model calls in the verifier.
-- Deterministic verifier mirroring the official `pred.py::extract_answer`
-  parsing and `result.py` accuracy (unparseable / missing answer = 0).
+- Deterministic verifier: `extract_answer` is a verbatim port of the official
+  `pred.py::extract_answer` (same two regexes, nothing more), and reward
+  follows `result.py`'s default accuracy (unparseable / missing answer = 0).
 - `task.toml` metadata carries `domain`, `difficulty` (easy/hard) and `length`
   (short/medium/long) for per-split reporting; `tests/expected.json` carries
   the same plus `sub_domain`.
 - `--split parity`: stratified subset (every 3rd item per
   domain × difficulty × length stratum, 176 tasks) for cheaper parity runs.
 - Oracle writes the gold letter in the official response format.
+- `scripts/summarize.py` reports attempted / scored / failed trial counts
+  (failed trials listed with their cause) and accuracy both over scored trials
+  and over attempted trials with failures counted as wrong, then the official
+  difficulty/length splits plus domain.
 
 ## Generated Task Structure
 
@@ -132,19 +146,28 @@ uv run longbench-v2 --output-dir ../../datasets/longbench-v2 --task-ids 66ead7bd
 ```
 
 Flags: `--output-dir`, `--limit`, `--overwrite`, `--task-ids` (Harbor ids,
-dataset `_id`s, or dataset indices), `--split {full,parity}`, `--data-path`.
-The generated dataset is ~440 MB (contexts dominate).
+dataset `_id`s, or dataset indices), `--split {full,parity}`, `--data-path`,
+`--skip-checksum`. The data cache lives at `./.cache/longbench-v2/data.json`
+relative to the working directory. The generated dataset is ~440 MB (contexts
+dominate).
 
 ## How It Is Graded
 
-`tests/grade.py` reads `/app/answer.txt`, strips `*`, and applies the official
-regexes in order: `The correct answer is \(([A-D])\)`, then
-`The correct answer is ([A-D])`; as a fallback it accepts a bare letter
-(`B`, `(B)`, `b.`). Reward is 1.0 iff the extracted letter equals the gold
-letter; a missing or unparseable answer scores 0 — the same as the default
-(uncompensated) accuracy in the official `result.json`. Per-task
-`domain`/`difficulty`/`length` are written to `/logs/verifier/result.json` so
-per-split accuracy can be aggregated from a job directory.
+`tests/grade.py` reads `/app/answer.txt` and applies `extract_answer`, a
+verbatim port of the official `pred.py::extract_answer` at the pinned
+revision: strip `*`, then match `The correct answer is \(([A-D])\)`, then
+`The correct answer is ([A-D])`. There are no extensions — a bare letter
+(`D`, `(D)`, `d.`) or a lowercase sentence scores 0, exactly as upstream.
+Reward is 1.0 iff the extracted letter equals the gold letter; a missing or
+unparseable answer scores 0 — the same as the default (uncompensated) accuracy
+in the official `result.py`. Per-task `domain`/`difficulty`/`length`, the
+parse `status` (`answered` / `unparseable_answer` / `missing_answer_file`) and
+the pinned revisions are written to `/logs/verifier/result.json` so per-split
+accuracy can be aggregated from a job directory.
+
+Grader controls on a generated task (gold = D): official format → 1; wrong
+letter → 0; missing file → 0; prose without the sentence → 0; `D`, `(D)`,
+`d.` → 0; `The correct answer is D` → 1; `**The correct answer is (D)**` → 1.
 
 ## Oracle Verification
 
@@ -152,7 +175,8 @@ per-split accuracy can be aggregated from a job directory.
 `nop` run (no answer written) scores 0 on every task, confirming the grader is
 not vacuous.
 
-Oracle run over all 503 tasks (local Docker, 2026-11-06, Harbor 0.25.0):
+Oracle run over all 503 tasks with the final (verbatim-upstream) parser and
+pinned dataset (local Docker, 2026-11-09, Harbor 0.25.0, 8 concurrent trials):
 
 ```text
 longbench-v2 • oracle
@@ -161,33 +185,65 @@ longbench-v2 • oracle
 ┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━┩
 │    503 │          0 │ 1.000 │
 └────────┴────────────┴───────┘
-Total runtime: 24m 30s
+Total runtime: 47m 33s
 ```
 
-`scripts/summarize.py` on the job directory reports 100% for every
-difficulty, length and domain split, with 0 unparseable answers.
+`scripts/summarize.py` on the job directory:
+
+```text
+attempted trials : 503
+scored trials    : 503
+failed trials    : 0  (trial exceptions: 0, verifier without reward: 0)
+
+accuracy (scored)                            n= 503  acc=100.00%
+accuracy (attempted, failures = 0)           n= 503  acc=100.00%
+  difficulty=easy / hard                     n= 192 / 311   acc=100.00%
+  length=short / medium / long               n= 180 / 215 / 108   acc=100.00%
+  (all six domains)                                         acc=100.00%
+
+scored trials with unparseable/missing answers: 0
+```
+
+(An earlier run on 2026-11-06 with the previous parser also scored 503/503 in
+24m 30s; the parser change only removes leniency, so the oracle format is
+unaffected.)
 
 ## Comparison with Original Benchmark (Parity)
 
 Parity has not been run yet. Planned setting (to be agreed with the Harbor
 team): Scenario 2 (the original harness is a direct LLM call) — fork
-`THUDM/LongBench` and add a per-question runner for a Harbor-supported CLI agent
-(Codex or Claude Code) using the same prompt and answer file; run the same agent
-and model through Harbor; 3 runs each; accuracy overall and by
-difficulty/length reported as mean ± sample SEM. Because contexts reach 2M
-words, parity may use the `parity` split (176 tasks, stratified); the README
-will state the subset if so.
+`THUDM/LongBench` at the pinned revision and add a per-question runner for a
+Harbor-supported CLI agent (Codex or Claude Code) using the same prompt and
+answer file; run the same agent and model through Harbor; 3 runs each;
+accuracy overall and by difficulty/length reported as mean ± sample SEM.
+Because contexts reach 2M words, parity may use the `parity` split (176 tasks,
+stratified); the README will state the subset if so.
+
+**Two protocols, reported separately.** Upstream LongBench v2 is a
+*single-call, truncated-context* setting: the whole context is placed in one
+prompt and, if it exceeds the model's window, the middle is cut
+(`pred.py`). This adapter is a *file-reading agent* setting: the agent reads
+`/app/context.txt` with its own tools, possibly selectively, across many
+calls. The comparison will therefore carry one row per protocol so the two are
+never conflated: (a) *file-reading agent protocol* — the fork's runner drives
+the same CLI agent against the same context file and prompt as Harbor does,
+which is the apples-to-apples parity row; (b) *upstream single-call protocol*
+— the unmodified `pred.py` numbers for the same model, reported alongside as
+the reference the paper used, not as a parity target. Any gap between (a) and
+(b) is a property of the protocol, not of the adapter.
 
 | Agent | Model | Metric | Number of Runs | Dataset Size | Original Benchmark Performance | Harbor Adapter Performance |
 |-------|-------|--------|----------------|--------------|--------------------------------|----------------------------|
-| TBD | TBD | Accuracy | 3 | TBD | TBD | TBD |
+| TBD (file-reading agent protocol, both sides) | TBD | Accuracy | 3 | TBD | TBD | TBD |
+| upstream `pred.py` (single-call, truncated context) — reference only | TBD | Accuracy | 3 | TBD | TBD | n/a |
 
 Reproduction requirements and steps:
 
 ```bash
 # Original side (fork link to be added): per-question CLI-agent runner using prompts/0shot.txt
-git clone https://github.com/THUDM/LongBench.git && cd LongBench
-python pred_agent.py --agent codex --model <model>    # added in the parity fork
+git clone https://github.com/THUDM/LongBench.git && cd LongBench && git checkout 2e00731f8d0bff23dc4325161044d0ed8af94c1e
+python pred_agent.py --agent codex --model <model>    # added in the parity fork: file-reading agent protocol
+python pred.py --model <model>                        # unmodified upstream: single-call, truncated-context reference
 python result.py
 
 # Harbor side (from the adapters repository root)
@@ -203,16 +259,25 @@ Accuracy = fraction of tasks with reward 1.0; per-split numbers come from
 - **Context as a file vs. inline prompt.** The original feeds the whole
   context into one prompt and truncates the middle if it exceeds the model's
   window. Harbor agents read `/app/context.txt` with tools and may read
-  selectively; this is an inherent harness difference and the reason parity
-  must use the same agent on both sides.
+  selectively; this is an inherent protocol difference, which is why the parity
+  section reports the file-reading agent protocol and the upstream single-call
+  protocol as separate rows and uses the same agent on both sides for the
+  former.
+- **Pinned data.** The adapter refuses to build from a `data.json` whose
+  sha256 differs from the pin (the HF repo was renamed from `THUDM` to
+  `zai-org`; the old URL redirects, and the pinned commit is unaffected). The
+  parity split is derived from dataset order, so the pin is what keeps it
+  stable.
 - **Long contexts are expensive.** p90 context ≈ 216k words, max ≈ 1.38M words
   (16 MB file). Agent timeout is 1 hour per task. Budget accordingly; use
   `--split parity` for cheaper experiments.
 - **Dataset size:** ~440 MB of task directories.
 - **Scoring variants.** The official `result.py` also reports a "compensated"
   accuracy that grants 0.25 for unparseable predictions; the verifier reports
-  plain accuracy. CoT and RAG settings of the paper are not separate tasks
-  (agents may reason however they like).
+  plain accuracy. The parser is the official one with no leniency; a
+  bare-letter-tolerant variant, if ever wanted, should be a separately named
+  dataset rather than a change to this one. CoT and RAG settings of the paper
+  are not separate tasks (agents may reason however they like).
 - Some contexts contain non-English text (e.g. a Kalamang grammar) and code
   repositories flattened to text, as in the original.
 
@@ -225,11 +290,16 @@ Accuracy = fraction of tasks with reward 1.0; per-split numbers come from
 
 ## Troubleshooting
 
-- `unparseable_answer` in `result.json`: the agent wrote prose without the
-  required format; the verifier is as lenient as the original plus bare letters.
+- `unparseable_answer` in `result.json`: the agent did not write the exact
+  sentence `The correct answer is (X)`; the verifier is exactly as strict as
+  the original (bare letters are not accepted).
+- `does not match the pinned LongBench v2 dataset`: the local `data.json`
+  differs from the pinned revision; delete it to re-download, or pass
+  `--skip-checksum` for a deliberately different file.
 - Agent timeouts on `long` tasks: raise `[agent] timeout_sec` in `task.toml`
   via the adapter template, or use the `parity` split.
-- Re-download data: delete `.cache/longbench-v2/data.json`.
+- Re-download data: delete `./.cache/longbench-v2/data.json` (relative to the
+  working directory).
 
 ## Citation
 

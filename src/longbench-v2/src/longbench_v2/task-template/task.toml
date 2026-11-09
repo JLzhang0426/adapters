@@ -23,6 +23,8 @@ difficulty = "{difficulty}"
 category = "long_context_qa"
 domain = "{domain_slug}"
 length = "{length}"
+dataset_revision = "{dataset_revision}"
+upstream_code_revision = "{upstream_code_revision}"
 
 [verifier]
 timeout_sec = 120.0

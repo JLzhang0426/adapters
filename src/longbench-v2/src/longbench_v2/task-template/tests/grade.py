@@ -2,12 +2,15 @@
 """
 LongBench v2 verifier.
 
-Extracts the predicted letter from /app/answer.txt using the same logic as the
-official `pred.py::extract_answer` (first "The correct answer is (X)", then
-"The correct answer is X"), extended to accept a bare letter answer. Reward is
-1.0 on an exact match with the gold letter, 0.0 otherwise (including no/invalid
-answer, which the official `result.py` also counts as wrong in its default
-uncompensated accuracy).
+Extracts the predicted letter from /app/answer.txt with `extract_answer`, a
+verbatim port of the official scorer (THUDM/LongBench `pred.py::extract_answer`,
+revision 2e00731): strip `*`, then match "The correct answer is (X)", then
+"The correct answer is X". Nothing else is accepted -- in particular a bare
+letter such as `D`, `(D)` or `d.` scores 0, exactly as upstream.
+
+Reward is 1.0 on an exact match with the gold letter, 0.0 otherwise (including
+no/invalid answer, which the official `result.py` also counts as wrong in its
+default, uncompensated accuracy).
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ from pathlib import Path
 
 
 def extract_answer(response: str) -> str | None:
-    """Mirror of THUDM/LongBench pred.py extract_answer, plus a bare-letter fallback."""
+    """Verbatim port of THUDM/LongBench pred.py::extract_answer (no extensions)."""
     response = response.replace("*", "")
     match = re.search(r"The correct answer is \(([A-D])\)", response)
     if match:
@@ -27,10 +30,6 @@ def extract_answer(response: str) -> str | None:
     match = re.search(r"The correct answer is ([A-D])", response)
     if match:
         return match.group(1)
-    stripped = response.strip()
-    match = re.fullmatch(r"\(?([A-Da-d])\)?\.?", stripped)
-    if match:
-        return match.group(1).upper()
     return None
 
 
@@ -68,6 +67,8 @@ def main() -> None:
         "sub_domain": expected.get("sub_domain"),
         "difficulty": expected.get("difficulty"),
         "length": expected.get("length"),
+        "dataset_revision": expected.get("dataset_revision"),
+        "upstream_code_revision": expected.get("upstream_code_revision"),
     }
     args.reward.parent.mkdir(parents=True, exist_ok=True)
     args.reward.write_text(str(reward), encoding="utf-8")

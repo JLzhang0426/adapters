@@ -21,6 +21,7 @@ The adapter converts every question into a Harbor task:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -29,9 +30,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-DATA_URL = "https://huggingface.co/datasets/THUDM/LongBench-v2/resolve/main/data.json"
-# Dataset revision pinned for reproducibility (HF `THUDM/LongBench-v2`, data.json).
-DATA_REVISION = "main"
+# ----------------------------------------------------------------- provenance
+# Dataset: Hugging Face `zai-org/LongBench-v2` (formerly `THUDM/LongBench-v2`;
+# the old name redirects). Pinned to an immutable commit so that content and
+# order -- and therefore task ids and the stratified parity split -- cannot
+# drift under us.
+DATA_REPO = "zai-org/LongBench-v2"
+DATA_REVISION = "2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9"  # 2024-12-20
+DATA_FILE = "data.json"
+DATA_URL = f"https://huggingface.co/datasets/{DATA_REPO}/resolve/{DATA_REVISION}/{DATA_FILE}"
+# sha256 of data.json at DATA_REVISION (Git LFS object id), 465,490,535 bytes.
+DATA_SHA256 = "15d61c22d92c96900b3c4948b6aeea218d3214b676a65df48e7b8555604c7fe2"
+DATA_SIZE_BYTES = 465_490_535
+
+# Prompt + scorer: GitHub `THUDM/LongBench` (prompts/0shot.txt, pred.py
+# extract_answer, result.py). Pinned to the repository HEAD at adaptation time;
+# the three files were last changed in c5ea10b (0shot.txt, pred.py) and
+# 5214a55 (result.py).
+UPSTREAM_CODE_REPO = "THUDM/LongBench"
+UPSTREAM_CODE_REVISION = "2e00731f8d0bff23dc4325161044d0ed8af94c1e"  # 2025-01-15
 
 @dataclass(frozen=True)
 class LongBenchItem:
@@ -65,7 +82,9 @@ class LongBenchV2Adapter:
         self.overwrite = overwrite
         self.task_ids = task_ids
         self.split = str(kwargs.get("split") or "full")
+        self.skip_checksum = bool(kwargs.get("skip_checksum", False))
         self.data_path = self._resolve_data_path(kwargs.get("data_path"))
+        self._verify_checksum(self.data_path)
 
     # ------------------------------------------------------------------ data
     def _resolve_data_path(self, configured: Any) -> Path:
@@ -81,11 +100,39 @@ class LongBenchV2Adapter:
             if candidate.is_file():
                 return candidate.resolve()
         cache.parent.mkdir(parents=True, exist_ok=True)
-        print(f"Downloading LongBench v2 data.json (~465 MB) to {cache} ...")
+        print(
+            f"Downloading LongBench v2 {DATA_FILE} (~465 MB) at revision "
+            f"{DATA_REVISION[:12]} to {cache} ..."
+        )
         tmp = cache.with_suffix(".part")
         urllib.request.urlretrieve(DATA_URL, tmp)
         tmp.rename(cache)
         return cache.resolve()
+
+    @staticmethod
+    def _sha256(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _verify_checksum(self, path: Path) -> None:
+        """Refuse to generate tasks from anything but the pinned data.json."""
+        if self.skip_checksum:
+            print(f"WARNING: --skip-checksum set; not verifying {path} against {DATA_SHA256[:12]}...")
+            return
+        actual = self._sha256(path)
+        if actual != DATA_SHA256:
+            raise ValueError(
+                f"{path} does not match the pinned LongBench v2 dataset "
+                f"({DATA_REPO}@{DATA_REVISION[:12]}):\n"
+                f"  expected sha256 {DATA_SHA256}\n"
+                f"  actual   sha256 {actual}\n"
+                "Delete the file to re-download the pinned revision, or pass "
+                "--skip-checksum to generate tasks from a different file (they will "
+                "not be comparable to the registered benchmark)."
+            )
 
     def _load_items(self) -> list[LongBenchItem]:
         records = json.loads(self.data_path.read_text(encoding="utf-8"))
@@ -180,6 +227,8 @@ class LongBenchV2Adapter:
         content = content.replace("{domain_slug}", self._DOMAINS[r["domain"]])
         content = content.replace("{difficulty}", str(r["difficulty"]))  # easy | hard
         content = content.replace("{length}", str(r["length"]))
+        content = content.replace("{dataset_revision}", f"{DATA_REPO}@{DATA_REVISION}")
+        content = content.replace("{upstream_code_revision}", f"{UPSTREAM_CODE_REPO}@{UPSTREAM_CODE_REVISION}")
         (task_dir / "task.toml").write_text(content, encoding="utf-8")
 
     def _write_environment(self, task_dir: Path, item: LongBenchItem) -> None:
@@ -196,6 +245,9 @@ class LongBenchV2Adapter:
             "sub_domain": r.get("sub_domain"),
             "difficulty": r["difficulty"],
             "length": r["length"],
+            "dataset_revision": f"{DATA_REPO}@{DATA_REVISION}",
+            "dataset_sha256": DATA_SHA256,
+            "upstream_code_revision": f"{UPSTREAM_CODE_REPO}@{UPSTREAM_CODE_REVISION}",
         }
         (task_dir / "tests" / "expected.json").write_text(
             json.dumps(expected, indent=2, ensure_ascii=False), encoding="utf-8"

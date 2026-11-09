@@ -52,6 +52,11 @@ def main() -> None:
         default=None,
         help="Path to LongBench v2 data.json (default: $LONGBENCH_V2_DATA or .cache/longbench-v2/data.json, downloaded if missing)",
     )
+    parser.add_argument(
+        "--skip-checksum",
+        action="store_true",
+        help="Do not verify data.json against the pinned sha256 (tasks will not be comparable to the registered benchmark)",
+    )
     args = parser.parse_args()
 
     adapter = LongBenchV2Adapter(
@@ -61,6 +66,7 @@ def main() -> None:
         task_ids=args.task_ids,
         split=args.split,
         data_path=args.data_path,
+        skip_checksum=args.skip_checksum,
     )
 
     adapter.run()
